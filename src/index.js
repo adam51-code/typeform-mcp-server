@@ -315,7 +315,6 @@ async function handleRpc(request, env) {
 
 export default {
   async fetch(request, env) {
-    // CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
@@ -328,7 +327,6 @@ export default {
 
     const url = new URL(request.url);
 
-    // Health check
     if (url.pathname === "/health" && request.method === "GET") {
       return new Response(JSON.stringify({
         status: "ok",
@@ -336,9 +334,10 @@ export default {
       }), { headers: { "Content-Type": "application/json" } });
     }
 
-    // Auth check
+    // Auth check: extract Bearer token using split to avoid regex escaping issues
     const auth = request.headers.get("Authorization") || "";
-    const token = auth.replace(/^Bearer\\s+/i, "");
+    const parts = auth.split(" ");
+    const token = parts.length > 1 ? parts.slice(1).join(" ") : "";
     if (token !== env.MCP_AUTH_TOKEN) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -346,7 +345,6 @@ export default {
       });
     }
 
-    // MCP endpoint
     if (url.pathname === "/mcp" && request.method === "POST") {
       return handleRpc(request, env);
     }
